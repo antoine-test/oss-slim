@@ -16,14 +16,14 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
-use function fopen;
-use function fread;
-use function filesize;
+use function file_get_contents;
 use function is_file;
 use function ltrim;
 use function md5;
 use function pathinfo;
+use function realpath;
 use function rtrim;
+use function strpos;
 use function urldecode;
 
 use const PATHINFO_EXTENSION;
@@ -44,21 +44,25 @@ class StaticFileMiddleware implements MiddlewareInterface
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $path = urldecode($request->getUri()->getPath());
-        $file = $this->root . '/' . ltrim($path, '/');
+        $file = realpath($this->root . '/' . ltrim($path, '/'));
 
-        if (!is_file($file)) {
+        if ($file === false || strpos($file, $this->root) !== 0 || !is_file($file)) {
             return $handler->handle($request);
         }
 
-        $handle = fopen($file, 'rb');
-        $contents = fread($handle, filesize($file));
+        $contents = (string) @file_get_contents($file);
+        $etag = '"' . md5($contents) . '"';
 
         $response = $this->responseFactory->createResponse();
+        if ($request->getHeaderLine('If-None-Match') == $etag) {
+            return $response->withStatus(304)->withHeader('ETag', $etag);
+        }
+
         $response->getBody()->write($contents);
 
         return $response
             ->withHeader('Content-Type', $this->guessMimeType($file))
-            ->withHeader('ETag', '"' . md5($contents) . '"');
+            ->withHeader('ETag', $etag);
     }
 
     private function guessMimeType(string $file): string

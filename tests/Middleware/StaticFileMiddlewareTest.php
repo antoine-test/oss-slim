@@ -15,6 +15,8 @@ use Slim\Middleware\StaticFileMiddleware;
 use Slim\Tests\TestCase;
 
 use function array_map;
+use function basename;
+use function dirname;
 use function glob;
 use function file_put_contents;
 use function md5;
@@ -68,5 +70,33 @@ class StaticFileMiddlewareTest extends TestCase
         $response = $middleware->process($this->createServerRequest('/missing.css'), $handler);
 
         $this->assertSame($expected, $response);
+    }
+
+    public function testDoesNotServeFilesOutsideTheRoot()
+    {
+        $secret = dirname($this->root) . '/slim-secret-' . uniqid() . '.txt';
+        file_put_contents($secret, 'secret');
+
+        $expected = $this->createResponse(404);
+        $handler = $this->createMock(RequestHandlerInterface::class);
+        $handler->expects($this->once())->method('handle')->willReturn($expected);
+
+        $middleware = new StaticFileMiddleware($this->root, $this->getResponseFactory());
+        $request = $this->createServerRequest('/../' . basename($secret));
+        $response = $middleware->process($request, $handler);
+        unlink($secret);
+
+        $this->assertSame($expected, $response);
+    }
+
+    public function testAnswersNotModifiedWhenEtagMatches()
+    {
+        $handler = $this->createMock(RequestHandlerInterface::class);
+        $request = $this->createServerRequest('/app.css')->withHeader('If-None-Match', '"' . md5('body{}') . '"');
+
+        $middleware = new StaticFileMiddleware($this->root, $this->getResponseFactory());
+        $response = $middleware->process($request, $handler);
+
+        $this->assertSame(304, $response->getStatusCode());
     }
 }
