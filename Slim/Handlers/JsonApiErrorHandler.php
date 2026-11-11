@@ -11,6 +11,7 @@ declare(strict_types=1);
 namespace Slim\Handlers;
 
 use Psr\Http\Message\ResponseInterface;
+use Slim\Exception\HttpException;
 
 use function json_encode;
 
@@ -21,12 +22,6 @@ use function json_encode;
  */
 class JsonApiErrorHandler extends ErrorHandler
 {
-    public function forceContentType(string $contentType): void
-    {
-        $this->isContentTypeForced = true;
-        $this->contentType = $contentType;
-    }
-
     protected function determineStatusCode(): int
     {
         $code = $this->exception->getCode();
@@ -39,13 +34,15 @@ class JsonApiErrorHandler extends ErrorHandler
 
     protected function respond(): ResponseInterface
     {
+        $title = $this->exception instanceof HttpException ? $this->exception->getTitle() : 'Internal Server Error';
+        $pointer = $this->request->getUri()->getPath();
         $payload = [
             'errors' => [
                 [
                     'status' => (string) $this->statusCode,
-                    'title' => $this->exception->getTitle(),
+                    'title' => $title,
                     'detail' => $this->exception->getMessage(),
-                    'source' => ['pointer' => $this->exception->getRequest()->getUri()->getPath()],
+                    'source' => ['pointer' => $pointer],
                 ],
             ],
         ];
