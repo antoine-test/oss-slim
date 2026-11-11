@@ -1,0 +1,28 @@
+name: sonar
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.scanner.sonarcloudUrl=https://dev11.sc-dev11.io
+            -Dsonar.scanner.apiBaseUrl=https://api.sc-dev11.io
+            -Dsonar.organization=antoine-test
+            -Dsonar.projectKey=antoine-test_oss-slim
+            -Dsonar.sources=Slim
+            -Dsonar.tests=tests
+            -Dsonar.scm.revision=${{ github.event.pull_request.head.sha || github.sha }}
+            
+            ${{ github.event_name == 'pull_request' && format('-Dsonar.pullrequest.key={0} -Dsonar.pullrequest.branch={1} -Dsonar.pullrequest.base={2}', github.event.pull_request.number, github.head_ref, github.base_ref) || '' }}
