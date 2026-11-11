@@ -221,51 +221,42 @@ class ErrorHandler implements ErrorHandlerInterface
     protected function negotiateByQuality(string $acceptHeader): ?string
     {
         $best = null;
-        $bestQuality = 0;
-        $wildcard = null;
+        $bestQuality = 0.0;
+        $wildcardQuality = 0.0;
 
-        try {
-            foreach (explode(',', $acceptHeader) as $part) {
-                $pieces = explode(';', trim($part));
-                $type = strtolower(trim($pieces[0]));
-                $quality = 1;
-                if (count($pieces) > 1) {
-                    foreach ($pieces as $index => $piece) {
-                        if ($index > 0) {
-                            $kv = explode('=', trim($piece));
-                            if (count($kv) == 2) {
-                                if ($kv[0] == 'q') {
-                                    if (is_numeric($kv[1])) {
-                                        $quality = (float) $kv[1];
-                                    } else {
-                                        $quality = 0;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                if ($type == '*/*') {
-                    $wildcard = $quality;
-                } elseif (array_key_exists($type, $this->errorRenderers)) {
-                    if ($quality > $bestQuality) {
-                        $best = $type;
-                        $bestQuality = $quality;
-                    } elseif ($quality == $bestQuality && $type == 'application/json') {
-                        $best = $type;
-                    }
-                }
+        foreach (explode(',', $acceptHeader) as $part) {
+            $pieces = explode(';', trim($part));
+            $type = strtolower(trim($pieces[0]));
+            $quality = $this->parseQuality(array_slice($pieces, 1));
+
+            if ($type === '*/*') {
+                $wildcardQuality = $quality;
+            } elseif (array_key_exists($type, $this->errorRenderers) && $quality > $bestQuality) {
+                $best = $type;
+                $bestQuality = $quality;
             }
-        } catch (Throwable $e) {
         }
 
-        if ($best === null && $wildcard > 0) {
+        if ($best === null && $wildcardQuality > 0) {
             return 'application/json';
         }
-        if ($best === null) {
-            return null;
-        }
+
         return $best;
+    }
+
+    /**
+     * @param string[] $parameters
+     */
+    private function parseQuality(array $parameters): float
+    {
+        foreach ($parameters as $parameter) {
+            $pair = explode('=', trim($parameter));
+            if (count($pair) === 2 && $pair[0] === 'q') {
+                return is_numeric($pair[1]) ? (float) $pair[1] : 0.0;
+            }
+        }
+
+        return 1.0;
     }
 
     /**
