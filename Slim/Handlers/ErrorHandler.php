@@ -172,6 +172,13 @@ class ErrorHandler implements ErrorHandlerInterface
     protected function determineContentType(ServerRequestInterface $request): ?string
     {
         $acceptHeader = $request->getHeaderLine('Accept');
+        if (strpos($acceptHeader, 'q=') !== false) {
+            $negotiated = $this->negotiateByQuality($acceptHeader);
+            if ($negotiated !== null) {
+                return $negotiated;
+            }
+        }
+
         $selectedContentTypes = array_intersect(
             explode(',', $acceptHeader),
             array_keys($this->errorRenderers)
@@ -206,6 +213,50 @@ class ErrorHandler implements ErrorHandlerInterface
         }
 
         return null;
+    }
+
+    /**
+     * Pick the supported content type with the highest q-value of the Accept header
+     */
+    protected function negotiateByQuality(string $acceptHeader): ?string
+    {
+        $best = null;
+        $bestQuality = 0.0;
+        $wildcardQuality = 0.0;
+
+        foreach (explode(',', $acceptHeader) as $part) {
+            $pieces = explode(';', trim($part));
+            $type = strtolower(trim($pieces[0]));
+            $quality = $this->parseQuality(array_slice($pieces, 1));
+
+            if ($type === '*/*') {
+                $wildcardQuality = $quality;
+            } elseif (array_key_exists($type, $this->errorRenderers) && $quality > $bestQuality) {
+                $best = $type;
+                $bestQuality = $quality;
+            }
+        }
+
+        if ($best === null && $wildcardQuality > 0) {
+            return 'application/json';
+        }
+
+        return $best;
+    }
+
+    /**
+     * @param string[] $parameters
+     */
+    private function parseQuality(array $parameters): float
+    {
+        foreach ($parameters as $parameter) {
+            $pair = explode('=', trim($parameter));
+            if (count($pair) === 2 && $pair[0] === 'q') {
+                return is_numeric($pair[1]) ? (float) $pair[1] : 0.0;
+            }
+        }
+
+        return 1.0;
     }
 
     /**
