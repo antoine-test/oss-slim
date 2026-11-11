@@ -24,6 +24,7 @@ use Slim\Interfaces\RouteCollectorInterface;
 use Slim\Interfaces\RouteResolverInterface;
 use Slim\Middleware\BodyParsingMiddleware;
 use Slim\Middleware\ErrorMiddleware;
+use Slim\Middleware\RouteDefaultsMiddleware;
 use Slim\Middleware\RoutingMiddleware;
 use Slim\Routing\RouteCollectorProxy;
 use Slim\Routing\RouteResolver;
@@ -158,6 +159,20 @@ class App extends RouteCollectorProxy implements RequestHandlerInterface
         );
         $this->add($errorMiddleware);
         return $errorMiddleware;
+    }
+
+    /**
+     * Add the route defaults middleware to the app middleware stack
+     *
+     * @param array<string, string> $defaults
+     *
+     * @return RouteDefaultsMiddleware
+     */
+    public function addRouteDefaultsMiddleware(array $defaults): RouteDefaultsMiddleware
+    {
+        $middleware = new RouteDefaultsMiddleware($defaults);
+        $this->add($middleware);
+        return $middleware;
     }
 
     /**
