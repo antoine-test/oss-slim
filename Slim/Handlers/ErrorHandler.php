@@ -172,6 +172,13 @@ class ErrorHandler implements ErrorHandlerInterface
     protected function determineContentType(ServerRequestInterface $request): ?string
     {
         $acceptHeader = $request->getHeaderLine('Accept');
+        if (strpos($acceptHeader, 'q=') !== false) {
+            $negotiated = $this->negotiateByQuality($acceptHeader);
+            if ($negotiated !== null) {
+                return $negotiated;
+            }
+        }
+
         $selectedContentTypes = array_intersect(
             explode(',', $acceptHeader),
             array_keys($this->errorRenderers)
@@ -206,6 +213,59 @@ class ErrorHandler implements ErrorHandlerInterface
         }
 
         return null;
+    }
+
+    /**
+     * Pick the supported content type with the highest q-value of the Accept header
+     */
+    protected function negotiateByQuality(string $acceptHeader): ?string
+    {
+        $best = null;
+        $bestQuality = 0;
+        $wildcard = null;
+
+        try {
+            foreach (explode(',', $acceptHeader) as $part) {
+                $pieces = explode(';', trim($part));
+                $type = strtolower(trim($pieces[0]));
+                $quality = 1;
+                if (count($pieces) > 1) {
+                    foreach ($pieces as $index => $piece) {
+                        if ($index > 0) {
+                            $kv = explode('=', trim($piece));
+                            if (count($kv) == 2) {
+                                if ($kv[0] == 'q') {
+                                    if (is_numeric($kv[1])) {
+                                        $quality = (float) $kv[1];
+                                    } else {
+                                        $quality = 0;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if ($type == '*/*') {
+                    $wildcard = $quality;
+                } elseif (array_key_exists($type, $this->errorRenderers)) {
+                    if ($quality > $bestQuality) {
+                        $best = $type;
+                        $bestQuality = $quality;
+                    } elseif ($quality == $bestQuality && $type == 'application/json') {
+                        $best = $type;
+                    }
+                }
+            }
+        } catch (Throwable $e) {
+        }
+
+        if ($best === null && $wildcard > 0) {
+            return 'application/json';
+        }
+        if ($best === null) {
+            return null;
+        }
+        return $best;
     }
 
     /**
