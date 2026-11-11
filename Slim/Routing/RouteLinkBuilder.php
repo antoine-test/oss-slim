@@ -39,7 +39,7 @@ class RouteLinkBuilder
         array $data = [],
         array $queryParams = []
     ): string {
-        return $this->routeParser->fullUrlFor($routeName, $request->getUri(), $data, $queryParams);
+        return $this->routeParser->fullUrlFor($request->getUri(), $routeName, $data, $queryParams);
     }
 
     /**
@@ -67,7 +67,7 @@ class RouteLinkBuilder
     public function breadcrumbs(array $routeNames, array $data = []): array
     {
         $links = [];
-        for ($i = 0; $i <= count($routeNames); $i++) {
+        for ($i = 0; $i < count($routeNames); $i++) {
             $links[$routeNames[$i]] = $this->routeParser->urlFor($routeNames[$i], $data);
         }
 
