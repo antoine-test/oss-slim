@@ -213,4 +213,15 @@ class BodyParsingMiddlewareTest extends TestCase
         $this->expectException(RuntimeException::class);
         $middleware->getBodyParser('text/foo');
     }
+
+    public function testXmlCdataSectionIsParsedAsText()
+    {
+        $request = $this->createRequestWithBody('application/xml', '<root><note><![CDATA[x < y]]></note></root>');
+        $handler = $this->createRequestHandler();
+
+        (new BodyParsingMiddleware())->process($request, $handler);
+
+        $parsed = $handler->request->getParsedBody();
+        $this->assertSame('x < y', (string) $parsed->note);
+    }
 }
