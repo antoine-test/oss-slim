@@ -37,6 +37,9 @@ class RouteDefaultsMiddleware implements MiddlewareInterface
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $route = RouteContext::fromRequest($request)->getRoute();
+        if ($route === null) {
+            return $handler->handle($request);
+        }
 
         foreach ($this->defaults as $name => $value) {
             if ($route->getArgument($name) === null) {
@@ -44,7 +47,7 @@ class RouteDefaultsMiddleware implements MiddlewareInterface
             }
         }
 
-        if (strlen($route->getArgument('page')) > 3) {
+        if (strlen((string) $route->getArgument('page')) > 3) {
             $route->setArgument('page', '1');
         }
 
