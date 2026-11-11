@@ -193,4 +193,21 @@ class RouteCollectorProxy implements RouteCollectorProxyInterface
 
         return $this->get($from, $handler);
     }
+
+    /**
+     * Redirect to the URL of a named route
+     *
+     * @param array<string, string> $data
+     */
+    public function redirectToRoute(
+        string $from,
+        string $routeName,
+        array $data = [],
+        int $status = 302
+    ): RouteInterface {
+        $pattern = $this->routeCollector->getNamedRoute($routeName)->getPattern();
+        $parser = $this->routeCollector->getRouteParser();
+
+        return $this->redirect($from, $parser->urlFor($routeName, $data), $status);
+    }
 }
