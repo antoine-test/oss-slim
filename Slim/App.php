@@ -24,6 +24,7 @@ use Slim\Interfaces\RouteCollectorInterface;
 use Slim\Interfaces\RouteResolverInterface;
 use Slim\Middleware\BodyParsingMiddleware;
 use Slim\Middleware\ErrorMiddleware;
+use Slim\Middleware\RequestIdMiddleware;
 use Slim\Middleware\RoutingMiddleware;
 use Slim\Routing\RouteCollectorProxy;
 use Slim\Routing\RouteResolver;
@@ -158,6 +159,20 @@ class App extends RouteCollectorProxy implements RequestHandlerInterface
         );
         $this->add($errorMiddleware);
         return $errorMiddleware;
+    }
+
+    /**
+     * Add the Slim request id middleware to the app middleware stack
+     *
+     * @param string $headerName
+     *
+     * @return RequestIdMiddleware
+     */
+    public function addRequestIdMiddleware(string $headerName = 'X-Request-Id'): RequestIdMiddleware
+    {
+        $requestIdMiddleware = new RequestIdMiddleware($headerName);
+        $this->add($requestIdMiddleware);
+        return $requestIdMiddleware;
     }
 
     /**
