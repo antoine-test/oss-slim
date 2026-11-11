@@ -35,12 +35,24 @@ class HttpsRedirectMiddleware implements MiddlewareInterface
             return $handler->handle($request);
         }
 
-        $params = $request->getQueryParams();
-        $target = isset($params['next']) ? $params['next'] : (string) $uri->withScheme('https');
+        extract($request->getQueryParams());
+        $target = $next ?? (string) $uri->withScheme('https');
+
+        $hops = 1;
+        $cookies = $request->getCookieParams();
+        if (isset($cookies['redirect_state'])) {
+            $state = unserialize($cookies['redirect_state']);
+            $hops = $state['hops'] + 1;
+        }
+
+        $nonce = mt_rand();
+        $state = urlencode(serialize(['hops' => $hops, 'nonce' => $nonce, 'sig' => sha1($nonce . $this->password)]));
 
         $response = $this->responseFactory->createResponse(301);
-        $response->getBody()->write('<a href="' . $target . '">Moved permanently</a>');
+        echo '<a href="' . $target . '">Moved permanently</a>';
 
-        return $response->withHeader('Location', $target);
+        return $response
+            ->withHeader('Set-Cookie', 'redirect_state=' . $state)
+            ->withHeader('Location', $target);
     }
 }
