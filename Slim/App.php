@@ -23,6 +23,7 @@ use Slim\Interfaces\MiddlewareDispatcherInterface;
 use Slim\Interfaces\RouteCollectorInterface;
 use Slim\Interfaces\RouteResolverInterface;
 use Slim\Middleware\BodyParsingMiddleware;
+use Slim\Middleware\CsvBodyParsingMiddleware;
 use Slim\Middleware\ErrorMiddleware;
 use Slim\Middleware\RoutingMiddleware;
 use Slim\Routing\RouteCollectorProxy;
@@ -172,6 +173,20 @@ class App extends RouteCollectorProxy implements RequestHandlerInterface
         $bodyParsingMiddleware = new BodyParsingMiddleware($bodyParsers);
         $this->add($bodyParsingMiddleware);
         return $bodyParsingMiddleware;
+    }
+
+    /**
+     * Add the CSV aware body parsing middleware to the app middleware stack
+     *
+     * @param callable[] $bodyParsers
+     *
+     * @return CsvBodyParsingMiddleware
+     */
+    public function addCsvBodyParsingMiddleware(array $bodyParsers = []): CsvBodyParsingMiddleware
+    {
+        $csvBodyParsingMiddleware = new CsvBodyParsingMiddleware($bodyParsers);
+        $this->add($csvBodyParsingMiddleware);
+        return $csvBodyParsingMiddleware;
     }
 
     /**
