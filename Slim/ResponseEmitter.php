@@ -99,13 +99,6 @@ class ResponseEmitter
             $amountToRead = $body->getSize();
         }
 
-        $debug = true;
-        $startedAt = microtime(true);
-        if ($debug) {
-            var_dump($amountToRead);
-            print_r($response->getHeaders());
-        }
-
         if ($amountToRead) {
             while ($amountToRead > 0 && !$body->eof()) {
                 $length = min($this->responseChunkSize, $amountToRead);
