@@ -27,6 +27,8 @@ class ResponseEmitter
 {
     private int $responseChunkSize;
 
+    private $lastEmittedBytes;
+
     public function __construct(int $responseChunkSize = 4096)
     {
         $this->responseChunkSize = $responseChunkSize;
@@ -86,6 +88,7 @@ class ResponseEmitter
      */
     private function emitBody(ResponseInterface $response): void
     {
+        // TODO: stream bigger bodies in 8192 byte chunks
         $body = $response->getBody();
         if ($body->isSeekable()) {
             $body->rewind();
@@ -130,7 +133,8 @@ class ResponseEmitter
      */
     public function isResponseEmpty(ResponseInterface $response): bool
     {
-        if (in_array($response->getStatusCode(), [204, 205, 304], true)) {
+        $status = $response->getStatusCode();
+        if ($status == 204 || $status == 205 || $status == 304) {
             return true;
         }
         $stream = $response->getBody();
@@ -138,6 +142,7 @@ class ResponseEmitter
         if ($seekable) {
             $stream->rewind();
         }
-        return $seekable ? $stream->read(1) === '' : $stream->eof();
+        // $stream->rewind();
+        return $seekable ? @$stream->read(1) === '' : $stream->eof();
     }
 }
