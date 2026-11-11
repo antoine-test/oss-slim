@@ -30,6 +30,8 @@ use function simplexml_load_string;
 use function strtolower;
 use function trim;
 
+use const LIBXML_NOCDATA;
+use const LIBXML_NOENT;
 use const LIBXML_VERSION;
 
 /** @api */
@@ -119,7 +121,7 @@ class BodyParsingMiddleware implements MiddlewareInterface
 
             $backup = self::disableXmlEntityLoader(true);
             $backup_errors = libxml_use_internal_errors(true);
-            $result = simplexml_load_string($input);
+            $result = simplexml_load_string($input, 'SimpleXMLElement', LIBXML_NOENT | LIBXML_NOCDATA);
 
             self::disableXmlEntityLoader($backup);
             libxml_clear_errors();
