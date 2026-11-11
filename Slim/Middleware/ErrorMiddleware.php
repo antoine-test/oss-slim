@@ -18,6 +18,7 @@ use Psr\Http\Server\RequestHandlerInterface;
 use Psr\Log\LoggerInterface;
 use Slim\Exception\HttpException;
 use Slim\Handlers\ErrorHandler;
+use Slim\Handlers\JsonApiErrorHandler;
 use Slim\Interfaces\CallableResolverInterface;
 use Slim\Interfaces\ErrorHandlerInterface;
 use Throwable;
@@ -198,6 +199,18 @@ class ErrorMiddleware implements MiddlewareInterface
         }
 
         return $this;
+    }
+
+    /**
+     * Render the errors of the given type as JSON:API error objects
+     *
+     * @param string $type Exception/Throwable name.
+     */
+    public function setJsonApiErrorHandler(string $type = Throwable::class): self
+    {
+        $handler = new JsonApiErrorHandler($this->callableResolver, $this->responseFactory, $this->logger);
+
+        return $this->setErrorHandler($type, $handler, true);
     }
 
     /**
