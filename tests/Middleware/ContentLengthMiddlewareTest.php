@@ -38,4 +38,48 @@ class ContentLengthMiddlewareTest extends TestCase
 
         $this->assertSame('4', $response->getHeaderLine('Content-Length'));
     }
+
+    public function testDoesNotAddContentLengthToChunkedResponse()
+    {
+        $request = $this->createServerRequest('/');
+        $responseFactory = $this->getResponseFactory();
+
+        $mw = function ($request, $handler) use ($responseFactory) {
+            $response = $responseFactory->createResponse()->withHeader('Transfer-Encoding', 'chunked');
+            $response->getBody()->write('Body');
+            return $response;
+        };
+
+        $middlewareDispatcher = $this->createMiddlewareDispatcher(
+            $this->createMock(RequestHandlerInterface::class),
+            null
+        );
+        $middlewareDispatcher->addCallable($mw);
+        $middlewareDispatcher->addMiddleware(new ContentLengthMiddleware());
+        $response = $middlewareDispatcher->handle($request);
+
+        $this->assertFalse($response->hasHeader('Content-Length'));
+    }
+
+    public function testKeepsExistingContentLength()
+    {
+        $request = $this->createServerRequest('/');
+        $responseFactory = $this->getResponseFactory();
+
+        $mw = function ($request, $handler) use ($responseFactory) {
+            $response = $responseFactory->createResponse()->withHeader('Content-Length', '10');
+            $response->getBody()->write('Body');
+            return $response;
+        };
+
+        $middlewareDispatcher = $this->createMiddlewareDispatcher(
+            $this->createMock(RequestHandlerInterface::class),
+            null
+        );
+        $middlewareDispatcher->addCallable($mw);
+        $middlewareDispatcher->addMiddleware(new ContentLengthMiddleware());
+        $response = $middlewareDispatcher->handle($request);
+
+        $this->assertSame('10', $response->getHeaderLine('Content-Length'));
+    }
 }
