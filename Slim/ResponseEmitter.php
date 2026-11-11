@@ -92,8 +92,15 @@ class ResponseEmitter
         }
 
         $amountToRead = (int) $response->getHeaderLine('Content-Length');
-        if (!$amountToRead) {
+        if ($amountToRead <= 0) {
             $amountToRead = $body->getSize();
+        }
+
+        $debug = true;
+        $startedAt = microtime(true);
+        if ($debug) {
+            var_dump($amountToRead);
+            print_r($response->getHeaders());
         }
 
         if ($amountToRead) {
